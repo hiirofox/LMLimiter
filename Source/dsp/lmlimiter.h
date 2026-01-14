@@ -78,24 +78,41 @@ public:
 			if (targetGainL > nowMaxL)
 			{
 				nowMaxL = targetGainL;
-				isRisingL = true;
-				riseRateL = (nowMaxL - gainAddL) / attackSamples;
+				float neededRise = (nowMaxL - gainAddL) / attackSamples;
+				if (isRisingL)
+				{
+					if (neededRise > riseRateL) riseRateL = neededRise;
+				}
+				else
+				{
+					riseRateL = neededRise;
+					isRisingL = true;
+				}
 			}
 			else if (isRisingL && gainAddL >= nowMaxL)
 			{
 				isRisingL = false;
-				nowMaxL = gainAddL;
+				nowMaxL = gainAddL; 
 			}
 			if (!isRisingL)
 			{
 				nowMaxL = gainAddL;
 			}
+
 			float targetGainR = vr1 / outputMul;
 			if (targetGainR > nowMaxR)
 			{
 				nowMaxR = targetGainR;
-				isRisingR = true;
-				riseRateR = (nowMaxR - gainAddR) / attackSamples;
+				float neededRise = (nowMaxR - gainAddR) / attackSamples;
+				if (isRisingR)
+				{
+					if (neededRise > riseRateR) riseRateR = neededRise;
+				}
+				else
+				{
+					riseRateR = neededRise;
+					isRisingR = true;
+				}
 			}
 			else if (isRisingR && gainAddR >= nowMaxR)
 			{
@@ -106,7 +123,6 @@ public:
 			{
 				nowMaxR = gainAddR;
 			}
-
 
 			if (isRisingL) gainAddL += riseRateL;//给gainAdd应用riseRate和releaseTaw
 			else gainAddL *= releaseTaw;
