@@ -31,7 +31,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout LModelAudioProcessor::create
 {
 	juce::AudioProcessorValueTreeState::ParameterLayout layout;
 	layout.add(std::make_unique<juce::AudioParameterFloat>("attack", "attack", 0, 40, 1));
-	layout.add(std::make_unique<juce::AudioParameterFloat>("release", "release", 0, 20, 1));
+	layout.add(std::make_unique<juce::AudioParameterFloat>("release", "release", 4, 100, 10));
 	layout.add(std::make_unique<juce::AudioParameterFloat>("input", "input", -30, 30, 0));
 	layout.add(std::make_unique<juce::AudioParameterFloat>("output", "output", -30, 30, 0));
 

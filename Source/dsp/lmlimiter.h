@@ -72,65 +72,13 @@ public:
 			vl1 = (vl1 > 0) ? vl1 : 0;
 			vr1 = (vr1 > 0) ? vr1 : 0;
 
-			//维护最大值。
-			//每次发现新最大值，更新上升速度，在attackMs之前使gainAdd达到目标值。
-			float targetGainL = vl1 / outputMul;
-			if (targetGainL > nowMaxL)
-			{
-				nowMaxL = targetGainL;
-				float neededRise = (nowMaxL - gainAddL) / attackSamples;
-				if (isRisingL)
-				{
-					if (neededRise > riseRateL) riseRateL = neededRise;
-				}
-				else
-				{
-					riseRateL = neededRise;
-					isRisingL = true;
-				}
-			}
-			else if (isRisingL && gainAddL >= nowMaxL)
-			{
-				isRisingL = false;
-				nowMaxL = gainAddL; 
-			}
-			if (!isRisingL)
-			{
-				nowMaxL = gainAddL;
-			}
+			if (vl1 > gainAddL)gainAddL = vl1;
+			else gainAddL = gainAddL * releaseTaw;
+			if (vr1 > gainAddR)gainAddR = vr1;
+			else gainAddR = gainAddR * releaseTaw;
 
-			float targetGainR = vr1 / outputMul;
-			if (targetGainR > nowMaxR)
-			{
-				nowMaxR = targetGainR;
-				float neededRise = (nowMaxR - gainAddR) / attackSamples;
-				if (isRisingR)
-				{
-					if (neededRise > riseRateR) riseRateR = neededRise;
-				}
-				else
-				{
-					riseRateR = neededRise;
-					isRisingR = true;
-				}
-			}
-			else if (isRisingR && gainAddR >= nowMaxR)
-			{
-				isRisingR = false;
-				nowMaxR = gainAddR;
-			}
-			if (!isRisingR)
-			{
-				nowMaxR = gainAddR;
-			}
-
-			if (isRisingL) gainAddL += riseRateL;//给gainAdd应用riseRate和releaseTaw
-			else gainAddL *= releaseTaw;
-			if (isRisingR) gainAddR += riseRateR;
-			else gainAddR *= releaseTaw;
-
-			float outl = delayL.ProcessSample(inl);//应用延迟
-			float outr = delayR.ProcessSample(inr);
+			float outl = inl;
+			float outr = inr;
 			outL[i] = outl / (1.0f + gainAddL);//应用增益补偿
 			outR[i] = outr / (1.0f + gainAddR);
 		}
