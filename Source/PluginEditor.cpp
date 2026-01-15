@@ -26,6 +26,9 @@ LModelAudioProcessorEditor::LModelAudioProcessorEditor(LModelAudioProcessor& p)
 	//constrainer.setFixedAspectRatio(11.0 / 4.0);  // 设置为16:9比例
 	//setConstrainer(&constrainer);  // 绑定窗口的宽高限制
 
+	K_Lookahead.setText("lookahead", "ms");
+	K_Lookahead.ParamLink(audioProcessor.GetParams(), "lookahead");
+	addAndMakeVisible(K_Lookahead);
 	K_Attack.setText("attack", "ms");
 	K_Attack.ParamLink(audioProcessor.GetParams(), "attack");
 	addAndMakeVisible(K_Attack);
@@ -35,9 +38,9 @@ LModelAudioProcessorEditor::LModelAudioProcessorEditor(LModelAudioProcessor& p)
 	K_Input.setText("input", "dB");
 	K_Input.ParamLink(audioProcessor.GetParams(), "input");
 	addAndMakeVisible(K_Input);
-	K_Output.setText("output", "dB");
-	K_Output.ParamLink(audioProcessor.GetParams(), "output");
-	addAndMakeVisible(K_Output);
+	K_Threshold.setText("K_Threshold", "dB");
+	K_Threshold.ParamLink(audioProcessor.GetParams(), "threshold");
+	addAndMakeVisible(K_Threshold);
 
 
 	startTimerHz(30);
@@ -68,10 +71,11 @@ void LModelAudioProcessorEditor::resized()
 	int x = bound.getX(), y = bound.getY(), w = bound.getWidth(), h = bound.getHeight();
 	auto convXY = juce::Rectangle<int>::leftTopRightBottom;
 
-	K_Attack.setBounds(32 + 64 * 0, 32, 64, 64);
-	K_Release.setBounds(32 + 64 * 1, 32, 64, 64);
-	K_Input.setBounds(32 + 64 * 2, 32, 64, 64);
-	K_Output.setBounds(32 + 64 * 3, 32, 64, 64);
+	K_Lookahead.setBounds(32 + 64 * 0, 32, 64, 64);
+	K_Attack.setBounds(32 + 64 * 1, 32, 64, 64);
+	K_Release.setBounds(32 + 64 * 2, 32, 64, 64);
+	K_Input.setBounds(32 + 64 * 3, 32, 64, 64);
+	K_Threshold.setBounds(32 + 64 * 4, 32, 64, 64);
 }
 
 void LModelAudioProcessorEditor::timerCallback()

@@ -30,10 +30,11 @@ private:
 	// This reference is provided as a quick way for your editor to
 	// access the processor object that created it.
 	LModelAudioProcessor& audioProcessor;
+	LMKnob K_Lookahead;
 	LMKnob K_Attack;
 	LMKnob K_Release;
 	LMKnob K_Input;
-	LMKnob K_Output;
+	LMKnob K_Threshold;
 
 	juce::ComponentBoundsConstrainer constrainer;  // 用于设置宽高比例
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LModelAudioProcessorEditor)

@@ -47,6 +47,10 @@ namespace LMLimiterNamespace
 		SlidingWindowMax() : windowSize(0), currentIndex(0) {}
 
 		void SetWindowSize(int numSamples) {
+			if (windowSize == numSamples) {
+				return;
+			}
+
 			if (numSamples < 1) {
 				numSamples = 1;
 			}
@@ -78,43 +82,47 @@ class LMLimiter {
 private:
 	float sampleRate = 48000.0;
 
-	LMLimiterNamespace::TinyDelay<2048> delayL;
-	LMLimiterNamespace::TinyDelay<2048> delayR;
+	LMLimiterNamespace::TinyDelay<4800> delayL;//最大100ms延时
+	LMLimiterNamespace::TinyDelay<4800> delayR;
 	LMLimiterNamespace::SlidingWindowMax swmL;
 	LMLimiterNamespace::SlidingWindowMax swmR;
 
-	float inputMul = 1.0, outputMul = 1.0;
+	float inputMul = 1.0, thresholdMul = 1.0;
 
 	float nowMaxL = 0, nowMaxR = 0;
 	float riseRateL = 0, riseRateR = 0;
 	float gainAddL = 0, gainAddR = 0;
 
-	float attackSamples = 480.0f;
+	float lookaheadSamples = 480.0f;
+	float attackTaw = 0.0f;
 	float releaseTaw = 0.0f;//release是一个一阶低通
 
 	bool isRisingL = false;
 	bool isRisingR = false;
 public:
-	void SetParams(float inputdB, float outputdB, float attackMs, float releaseMs)
+	void SetParams(float lookahead, float inputdB, float thresholddB, float attackMs, float releaseMs)
 	{
 		inputMul = powf(10.0f, inputdB / 20.0f);
-		outputMul = powf(10.0f, outputdB / 20.0f);
+		thresholdMul = powf(10.0f, thresholddB / 20.0f);
 
-		releaseTaw = expf(-1.0f / ((releaseMs + 0.05) * sampleRate / 1000.0f));//release是一个一阶低通滤波
-		attackSamples = 2 + attackMs * sampleRate / 1000.0f;
-		delayL.SetDelaySamples(attackSamples);
-		delayR.SetDelaySamples(attackSamples);
-		swmL.SetWindowSize(attackSamples);
-		swmR.SetWindowSize(attackSamples);
+		attackTaw = 1.0 / lookaheadSamples * (1.0 + 1.0f / (attackMs * sampleRate / 1000.0f));//在lookahead时间内上升到目标值,然后速度再乘以一个attack时间常数
+		releaseTaw = 1.0f / (releaseMs * sampleRate / 1000.0f);
+
+		float lookaheadSamples = lookahead * sampleRate / 1000.0f + 2.0;
+		if (lookaheadSamples > 4800.0f) lookaheadSamples = 4800.0f;
+		delayL.SetDelaySamples(lookaheadSamples);
+		delayR.SetDelaySamples(lookaheadSamples);
+		swmL.SetWindowSize(lookaheadSamples);
+		swmR.SetWindowSize(lookaheadSamples);
 	}
 	void ProcessBlock(const float* inL, const float* inR, float* outL, float* outR, int numSamples)
 	{
 		for (int i = 0; i < numSamples; ++i)
 		{
-			float inl = inL[i] * inputMul;
-			float inr = inR[i] * inputMul;
-			float vl1 = fabsf(inl) - outputMul;
-			float vr1 = fabsf(inr) - outputMul;
+			float inl = inL[i] * inputMul / thresholdMul;
+			float inr = inR[i] * inputMul / thresholdMul;
+			float vl1 = fabsf(inl) - 1.0;
+			float vr1 = fabsf(inr) - 1.0;
 			vl1 = (vl1 > 0) ? vl1 : 0;
 			vr1 = (vr1 > 0) ? vr1 : 0;
 
@@ -123,18 +131,31 @@ public:
 			float dlyL = delayL.ProcessSample(inl);//延时补偿
 			float dlyR = delayR.ProcessSample(inr);
 
-			//主要是这个部分出现问题。
-			//////
-			if (smaxL > gainAddL)gainAddL += smaxL / attackSamples;//如果是上升则用线性包络
-			else gainAddL += releaseTaw * (smaxL - gainAddL);//如果是下降则用指数衰减包络
-			if (smaxR > gainAddR)gainAddR += smaxR / attackSamples;
-			else gainAddR += releaseTaw * (smaxR - gainAddR);
-			//////
+			if (smaxL > gainAddL)
+			{
+				gainAddL += smaxL * attackTaw;//在lookahead时间内上升到目标值
+				if (gainAddL > smaxL) gainAddL = smaxL;
+			}
+			else
+			{
+				gainAddL += releaseTaw * (smaxL - gainAddL);
+				if (gainAddL < smaxL) gainAddL = smaxL;
+			}
+			if (smaxR > gainAddR)
+			{
+				gainAddR += smaxR * attackTaw;//在lookahead时间内上升到目标值
+				if (gainAddR > smaxR) gainAddR = smaxR;
+			}
+			else
+			{
+				gainAddR += releaseTaw * (smaxR - gainAddR);
+				if (gainAddR < smaxR) gainAddR = smaxR;
+			}
 
 			float outl = dlyL / (1.0f + gainAddL);
-			float outr = dlyL / (1.0f + gainAddR);
-			outL[i] = outl;//应用增益补偿
-			outR[i] = outr;
+			float outr = dlyR / (1.0f + gainAddR);
+			outL[i] = outl * thresholdMul;//应用增益补偿
+			outR[i] = outr * thresholdMul;
 		}
 	}
 };
