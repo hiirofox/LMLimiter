@@ -11,7 +11,7 @@
 
 //==============================================================================
 LModelAudioProcessorEditor::LModelAudioProcessorEditor(LModelAudioProcessor& p)
-	: AudioProcessorEditor(&p), audioProcessor(p)
+	: AudioProcessorEditor(&p), audioProcessor(p), meterUI(&p.limiter)
 {
 	// Make sure that before the constructor has finished, you've set the
 	// editor's size to whatever you need it to be.
@@ -20,8 +20,8 @@ LModelAudioProcessorEditor::LModelAudioProcessorEditor(LModelAudioProcessor& p)
 	setOpaque(false);  // 允许在边框外面绘制
 
 	//setResizeLimits(64 * 11, 64 * 5, 10000, 10000); // 设置最小宽高为300x200，最大宽高为800x600
-	setSize(64 * 7, 64 * 2);
-	setResizeLimits(64 * 7, 64 * 2, 64 * 13, 64 * 2);
+	setSize(64 * 5, 64 * 4);
+	setResizeLimits(64 * 5, 64 * 4, 64 * 13, 64 * 4);
 
 	//constrainer.setFixedAspectRatio(11.0 / 4.0);  // 设置为16:9比例
 	//setConstrainer(&constrainer);  // 绑定窗口的宽高限制
@@ -29,6 +29,9 @@ LModelAudioProcessorEditor::LModelAudioProcessorEditor(LModelAudioProcessor& p)
 	K_Lookahead.setText("lookahead", "ms");
 	K_Lookahead.ParamLink(audioProcessor.GetParams(), "lookahead");
 	addAndMakeVisible(K_Lookahead);
+	K_Threshold.setText("thres", "dB");
+	K_Threshold.ParamLink(audioProcessor.GetParams(), "threshold");
+	addAndMakeVisible(K_Threshold);
 	K_Attack.setText("attack", "ms");
 	K_Attack.ParamLink(audioProcessor.GetParams(), "attack");
 	addAndMakeVisible(K_Attack);
@@ -41,10 +44,8 @@ LModelAudioProcessorEditor::LModelAudioProcessorEditor(LModelAudioProcessor& p)
 	K_Output.setText("output", "dB");
 	K_Output.ParamLink(audioProcessor.GetParams(), "output");
 	addAndMakeVisible(K_Output);
-	K_Threshold.setText("Threshold", "dB");
-	K_Threshold.ParamLink(audioProcessor.GetParams(), "threshold");
-	addAndMakeVisible(K_Threshold);
 
+	addAndMakeVisible(meterUI);
 
 	startTimerHz(30);
 
@@ -65,7 +66,7 @@ void LModelAudioProcessorEditor::paint(juce::Graphics& g)
 
 	int w = getBounds().getWidth(), h = getBounds().getHeight();
 
-	g.drawText("LMLimiter 260115 13:15", juce::Rectangle<float>(0, h - 16, w, 16), 1);
+	g.drawText("LMLimiter 260115 16:38", juce::Rectangle<float>(0, h - 16, w, 16), 1);
 }
 
 void LModelAudioProcessorEditor::resized()
@@ -74,12 +75,14 @@ void LModelAudioProcessorEditor::resized()
 	int x = bound.getX(), y = bound.getY(), w = bound.getWidth(), h = bound.getHeight();
 	auto convXY = juce::Rectangle<int>::leftTopRightBottom;
 
-	K_Lookahead.setBounds(32 + 64 * 0, 32, 64, 64);
-	K_Attack.setBounds(32 + 64 * 1, 32, 64, 64);
-	K_Release.setBounds(32 + 64 * 2, 32, 64, 64);
-	K_Input.setBounds(32 + 64 * 3, 32, 64, 64);
-	K_Output.setBounds(32 + 64 * 4, 32, 64, 64);
-	K_Threshold.setBounds(32 + 64 * 5, 32, 64, 64);
+	K_Lookahead.setBounds(32 + 64 * 0, 32 + 64 * 0, 64, 64);
+	K_Threshold.setBounds(32 + 64 * 1, 32 + 64 * 0, 64, 64);
+	K_Attack.setBounds(32 + 64 * 0, 32 + 64 * 1, 64, 64);
+	K_Release.setBounds(32 + 64 * 1, 32 + 64 * 1, 64, 64);
+	K_Input.setBounds(32 + 64 * 0, 32 + 64 * 2, 64, 64);
+	K_Output.setBounds(32 + 64 * 1, 32 + 64 * 2, 64, 64);
+
+	meterUI.setBounds(convXY(192, 32, w - 32, h - 32));
 }
 
 void LModelAudioProcessorEditor::timerCallback()

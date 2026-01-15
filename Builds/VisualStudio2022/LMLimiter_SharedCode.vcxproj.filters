@@ -3546,6 +3546,12 @@
     <ClInclude Include="..\..\Source\ui\LM_slider.h">
       <Filter>LMLimiter\Source\ui</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\ui\SingleMeterUI.h">
+      <Filter>LMLimiter\Source\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\ui\LMLimiterMeterUI.h">
+      <Filter>LMLimiter\Source\ui</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Source\PluginProcessor.h">
       <Filter>LMLimiter\Source</Filter>
     </ClInclude>

@@ -78,7 +78,56 @@ namespace LMLimiterNamespace
 			return deque.front().value;
 		}
 	};
+
+	class SampleToPeak //之后再加上去了
+	{
+	private:
+		float buffer[4]; // 移位寄存器：s[0]是最旧的, s[3]是最新的
+		bool filled;     // 缓冲是否填满
+
+	public:
+		SampleToPeak() {
+			for (int i = 0; i < 4; ++i) buffer[i] = 0.0f;
+		}
+
+		float ProcessSampleHermite4x(float x) {
+			buffer[0] = buffer[1];
+			buffer[1] = buffer[2];
+			buffer[2] = buffer[3];
+			buffer[3] = x;
+
+			const float y0 = buffer[0];
+			const float y1 = buffer[1];
+			const float y2 = buffer[2];
+			const float y3 = buffer[3];
+
+			float c0 = y1;
+			float c1 = 0.5f * (y2 - y0);
+			float c2 = y0 - 2.5f * y1 + 2.0f * y2 - 0.5f * y3;
+			float c3 = 0.5f * (y3 - y0) + 1.5f * (y1 - y2);
+
+			float val_25 = c0 + 0.25f * (c1 + 0.25f * (c2 + 0.25f * c3));
+			float val_50 = c0 + 0.50f * (c1 + 0.50f * (c2 + 0.50f * c3));
+			float val_75 = c0 + 0.75f * (c1 + 0.75f * (c2 + 0.75f * c3));
+
+			float max_peak = fabsf(y1);
+			float abs_25 = fabsf(val_25);
+			if (abs_25 > max_peak) max_peak = abs_25;
+			float abs_50 = fabsf(val_50);
+			if (abs_50 > max_peak) max_peak = abs_50;
+			float abs_75 = fabsf(val_75);
+			if (abs_75 > max_peak) max_peak = abs_75;
+
+			return max_peak;
+		}
+		float ProcessSampleSimple(float x)
+		{
+			return fabsf(x);
+		}
+	};
 }
+
+#define WithEditor 1
 
 class LMLimiter {
 private:
@@ -101,6 +150,20 @@ private:
 
 	bool isRisingL = false;
 	bool isRisingR = false;
+
+#if WithEditor
+	using ThreadSafeFloat = std::atomic<float>;
+	float maxInputdB = 0.0f;//输入电平（包含插件inputdB的增益）
+	float maxOutputdB = 0.0f;//总输出电平（包含outputdB增益）
+	float maxThresholddB = 0.0f;//阈值电平
+	float maxReductiondB = 0.0f;//压下去的量
+	ThreadSafeFloat lastMaxInputdB = -1000.0f;
+	ThreadSafeFloat lastMaxOutputdB = -1000.0f;
+	ThreadSafeFloat lastMaxThresholddB = -1000.0f;
+	ThreadSafeFloat lastMaxReductiondB = -1000.0f;
+	int updateCounter = 0;
+#endif
+
 public:
 	void SetParams(float lookahead, float inputdB, float outputdB, float thresholddB, float attackMs, float releaseMs)
 	{
@@ -144,7 +207,7 @@ public:
 			else
 			{
 				gainAddL += releaseTaw * (smaxL - gainAddL);
-				if (gainAddL < smaxL) gainAddL = smaxL;
+				//if (gainAddL < smaxL) gainAddL = smaxL;
 			}
 			if (smaxR > gainAddR)
 			{
@@ -154,7 +217,7 @@ public:
 			else
 			{
 				gainAddR += releaseTaw * (smaxR - gainAddR);
-				if (gainAddR < smaxR) gainAddR = smaxR;
+				//if (gainAddR < smaxR) gainAddR = smaxR;
 			}
 
 			//最终保护：如果存在lookahead还没准备好的情况，则强制限制
@@ -170,6 +233,57 @@ public:
 
 			outL[i] = outl * thresholdMul * outputMul;//应用增益补偿
 			outR[i] = outr * thresholdMul * outputMul;
+
+#if WithEditor
+			float absInL = fabsf(inl * thresholdMul);
+			float inLdB = 20.0f * log10f(absInL + 1e-60);
+			if (inLdB > maxInputdB) maxInputdB = inLdB;
+
+			float absInR = fabsf(inr * thresholdMul);
+			float inRdB = 20.0f * log10f(absInR + 1e-60);
+			if (inRdB > maxInputdB) maxInputdB = inRdB;
+
+			float absOutL = fabsf(outL[i]);
+			float outLdB = 20.0f * log10f(absOutL + 1e-60);
+			if (outLdB > maxOutputdB) maxOutputdB = outLdB;
+
+			float absOutR = fabsf(outR[i]);
+			float outRdB = 20.0f * log10f(absOutR + 1e-60);
+			if (outRdB > maxOutputdB) maxOutputdB = outRdB;
+
+			float thresholddB = 20.0f * log10f(thresholdMul + 1e-60);
+			if (thresholddB > maxThresholddB) maxThresholddB = thresholddB;
+			float reductionL = 20.0f * log10f(1.0f + gainAddL);
+			if (reductionL > maxReductiondB) maxReductiondB = reductionL;
+			float reductionR = 20.0f * log10f(1.0f + gainAddR);
+			if (reductionR > maxReductiondB) maxReductiondB = reductionR;
+			updateCounter++;
+#endif
+
 		}
 	}
+
+#if WithEditor
+	void GetMeterValues(float& inputdB, float& outputdB, float& thresholddB, float& reductiondB)
+	{
+		if (updateCounter >= 1024)
+		{
+			lastMaxInputdB.store(maxInputdB);
+			lastMaxOutputdB.store(maxOutputdB);
+			lastMaxThresholddB.store(maxThresholddB);
+			lastMaxReductiondB.store(maxReductiondB);
+			maxInputdB = -1000.0f;
+			maxOutputdB = -1000.0f;
+			maxThresholddB = -1000.0f;
+			maxReductiondB = -1000.0f;
+			updateCounter = 0;
+		}
+		inputdB = lastMaxInputdB.load();
+		outputdB = lastMaxOutputdB.load();
+		thresholddB = lastMaxThresholddB.load();
+		reductiondB = lastMaxReductiondB.load();
+	}
+#endif
+
+
 };

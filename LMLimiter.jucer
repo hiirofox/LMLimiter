@@ -10,6 +10,9 @@
       <GROUP id="{D06EBDB8-B627-F4B5-39F9-5069614D8D7D}" name="ui">
         <FILE id="ucCzKk" name="LM_slider.cpp" compile="1" resource="0" file="Source/ui/LM_slider.cpp"/>
         <FILE id="kZ0vSS" name="LM_slider.h" compile="0" resource="0" file="Source/ui/LM_slider.h"/>
+        <FILE id="SuHLmx" name="SingleMeterUI.h" compile="0" resource="0" file="Source/ui/SingleMeterUI.h"/>
+        <FILE id="QMtxtO" name="LMLimiterMeterUI.h" compile="0" resource="0"
+              file="Source/ui/LMLimiterMeterUI.h"/>
       </GROUP>
       <FILE id="O1xEwu" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>

@@ -61,14 +61,14 @@ public:
 	{
 		return Params;
 	}
-
+	
+	LMLimiter limiter;
 
 private:
 	//Synth Param
 	static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 	juce::AudioProcessorValueTreeState Params{ *this, nullptr, "Parameters", createParameterLayout() };
 
-	LMLimiter limiter;
 
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LModelAudioProcessor)

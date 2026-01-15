@@ -11,7 +11,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "ui/LM_slider.h"
-
+#include "ui/LMLimiterMeterUI.h"
 //==============================================================================
 /**
 */
@@ -36,6 +36,8 @@ private:
 	LMKnob K_Input;
 	LMKnob K_Output;
 	LMKnob K_Threshold;
+
+	LMLimiterMeterUI meterUI;
 
 	juce::ComponentBoundsConstrainer constrainer;  // 用于设置宽高比例
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LModelAudioProcessorEditor)
