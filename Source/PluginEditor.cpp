@@ -38,7 +38,10 @@ LModelAudioProcessorEditor::LModelAudioProcessorEditor(LModelAudioProcessor& p)
 	K_Input.setText("input", "dB");
 	K_Input.ParamLink(audioProcessor.GetParams(), "input");
 	addAndMakeVisible(K_Input);
-	K_Threshold.setText("K_Threshold", "dB");
+	K_Output.setText("output", "dB");
+	K_Output.ParamLink(audioProcessor.GetParams(), "output");
+	addAndMakeVisible(K_Output);
+	K_Threshold.setText("Threshold", "dB");
 	K_Threshold.ParamLink(audioProcessor.GetParams(), "threshold");
 	addAndMakeVisible(K_Threshold);
 
@@ -62,7 +65,7 @@ void LModelAudioProcessorEditor::paint(juce::Graphics& g)
 
 	int w = getBounds().getWidth(), h = getBounds().getHeight();
 
-	g.drawText("LMLimiter 260114 18:37", juce::Rectangle<float>(0, h - 16, w, 16), 1);
+	g.drawText("LMLimiter 260115 13:15", juce::Rectangle<float>(0, h - 16, w, 16), 1);
 }
 
 void LModelAudioProcessorEditor::resized()
@@ -75,7 +78,8 @@ void LModelAudioProcessorEditor::resized()
 	K_Attack.setBounds(32 + 64 * 1, 32, 64, 64);
 	K_Release.setBounds(32 + 64 * 2, 32, 64, 64);
 	K_Input.setBounds(32 + 64 * 3, 32, 64, 64);
-	K_Threshold.setBounds(32 + 64 * 4, 32, 64, 64);
+	K_Output.setBounds(32 + 64 * 4, 32, 64, 64);
+	K_Threshold.setBounds(32 + 64 * 5, 32, 64, 64);
 }
 
 void LModelAudioProcessorEditor::timerCallback()

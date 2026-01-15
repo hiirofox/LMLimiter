@@ -34,6 +34,7 @@ private:
 	LMKnob K_Attack;
 	LMKnob K_Release;
 	LMKnob K_Input;
+	LMKnob K_Output;
 	LMKnob K_Threshold;
 
 	juce::ComponentBoundsConstrainer constrainer;  // 用于设置宽高比例

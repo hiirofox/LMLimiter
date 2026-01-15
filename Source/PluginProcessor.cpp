@@ -34,6 +34,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout LModelAudioProcessor::create
 	layout.add(std::make_unique<juce::AudioParameterFloat>("attack", "attack", 0, 500, 1));
 	layout.add(std::make_unique<juce::AudioParameterFloat>("release", "release", 4, 500, 10));
 	layout.add(std::make_unique<juce::AudioParameterFloat>("input", "input", -30, 30, 0));
+	layout.add(std::make_unique<juce::AudioParameterFloat>("output", "output", -30, 30, 0));
 	layout.add(std::make_unique<juce::AudioParameterFloat>("threshold", "threshold", -30, 30, 0));
 
 	return layout;
@@ -175,9 +176,10 @@ void LModelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 	float attack = *Params.getRawParameterValue("attack");
 	float release = *Params.getRawParameterValue("release");
 	float inputdB = *Params.getRawParameterValue("input");
+	float outputdB = *Params.getRawParameterValue("output");
 	float thresholddB = *Params.getRawParameterValue("threshold");
 
-	limiter.SetParams(lookahead, inputdB, thresholddB, attack, release);
+	limiter.SetParams(lookahead, inputdB, outputdB, thresholddB, attack, release);
 	limiter.ProcessBlock(recbufl, recbufr, wavbufl, wavbufr, numSamples);
 }
 

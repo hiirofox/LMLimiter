@@ -19,9 +19,11 @@ namespace LMLimiterNamespace
 		}
 		void SetDelaySamples(int numSamples)
 		{
+			if (delaySamples == numSamples) return;
 			if (numSamples < 0)numSamples = 0;
 			if (numSamples >= MaxDelaySamples) numSamples = MaxDelaySamples - 1;
 			delaySamples = numSamples;
+			memset(buf, 0, sizeof(buf));
 		}
 		float ProcessSample(float inSample)
 		{
@@ -87,7 +89,7 @@ private:
 	LMLimiterNamespace::SlidingWindowMax swmL;
 	LMLimiterNamespace::SlidingWindowMax swmR;
 
-	float inputMul = 1.0, thresholdMul = 1.0;
+	float inputMul = 1.0, outputMul = 1.0, thresholdMul = 1.0;
 
 	float nowMaxL = 0, nowMaxR = 0;
 	float riseRateL = 0, riseRateR = 0;
@@ -100,12 +102,14 @@ private:
 	bool isRisingL = false;
 	bool isRisingR = false;
 public:
-	void SetParams(float lookahead, float inputdB, float thresholddB, float attackMs, float releaseMs)
+	void SetParams(float lookahead, float inputdB, float outputdB, float thresholddB, float attackMs, float releaseMs)
 	{
 		inputMul = powf(10.0f, inputdB / 20.0f);
+		outputMul = powf(10.0f, outputdB / 20.0f);
 		thresholdMul = powf(10.0f, thresholddB / 20.0f);
 
-		attackTaw = 1.0 / lookaheadSamples * (1.0 + 1.0f / (attackMs * sampleRate / 1000.0f));//在lookahead时间内上升到目标值,然后速度再乘以一个attack时间常数
+		attackTaw = 1.0 / lookaheadSamples;//在lookahead时间内上升到目标值,然后速度再乘以一个attack时间常数
+		attackTaw *= (1.0 + attackMs / 1000.0);//应用attackMs(别信这个单位)
 		releaseTaw = 1.0f / (releaseMs * sampleRate / 1000.0f);
 
 		float lookaheadSamples = lookahead * sampleRate / 1000.0f + 2.0;
@@ -152,10 +156,19 @@ public:
 				if (gainAddR < smaxR) gainAddR = smaxR;
 			}
 
+			//最终保护：如果存在lookahead还没准备好的情况，则强制限制
+			float dlyvl = fabsf(dlyL) - 1.0;
+			float dlyvr = fabsf(dlyR) - 1.0;
+			if (dlyvl > gainAddL) gainAddL = dlyvl;
+			if (dlyvr > gainAddR) gainAddR = dlyvr;
+
 			float outl = dlyL / (1.0f + gainAddL);
 			float outr = dlyR / (1.0f + gainAddR);
-			outL[i] = outl * thresholdMul;//应用增益补偿
-			outR[i] = outr * thresholdMul;
+			if (outl > 1.0f) outl = 1.0f;//削波吧，我力竭了
+			if (outl < -1.0f) outl = -1.0f;
+
+			outL[i] = outl * thresholdMul * outputMul;//应用增益补偿
+			outR[i] = outr * thresholdMul * outputMul;
 		}
 	}
 };
