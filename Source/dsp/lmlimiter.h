@@ -31,6 +31,47 @@ namespace LMLimiterNamespace
 			return outSample;
 		}
 	};
+
+	class SlidingWindowMax {
+	private:
+		struct Sample {
+			long long index;
+			float value;
+		};
+
+		std::deque<Sample> deque;
+		int windowSize;
+		long long currentIndex;
+
+	public:
+		SlidingWindowMax() : windowSize(0), currentIndex(0) {}
+
+		void SetWindowSize(int numSamples) {
+			if (numSamples < 1) {
+				numSamples = 1;
+			}
+			windowSize = numSamples;
+			deque.clear();
+			currentIndex = 0;
+		}
+
+		float ProcessSample(float x) {
+			while (!deque.empty() && deque.back().value <= x) {
+				deque.pop_back();
+			}
+
+			deque.push_back({ currentIndex, x });
+
+			if (deque.front().index <= currentIndex - windowSize) {
+				deque.pop_front();
+			}
+
+			currentIndex++;
+
+			if (deque.empty()) return 0;//防止空deque
+			return deque.front().value;
+		}
+	};
 }
 
 class LMLimiter {
@@ -39,6 +80,9 @@ private:
 
 	LMLimiterNamespace::TinyDelay<2048> delayL;
 	LMLimiterNamespace::TinyDelay<2048> delayR;
+	LMLimiterNamespace::SlidingWindowMax swmL;
+	LMLimiterNamespace::SlidingWindowMax swmR;
+
 	float inputMul = 1.0, outputMul = 1.0;
 
 	float nowMaxL = 0, nowMaxR = 0;
@@ -60,6 +104,8 @@ public:
 		attackSamples = 2 + attackMs * sampleRate / 1000.0f;
 		delayL.SetDelaySamples(attackSamples);
 		delayR.SetDelaySamples(attackSamples);
+		swmL.SetWindowSize(attackSamples);
+		swmR.SetWindowSize(attackSamples);
 	}
 	void ProcessBlock(const float* inL, const float* inR, float* outL, float* outR, int numSamples)
 	{
@@ -72,15 +118,23 @@ public:
 			vl1 = (vl1 > 0) ? vl1 : 0;
 			vr1 = (vr1 > 0) ? vr1 : 0;
 
-			if (vl1 > gainAddL)gainAddL = vl1;
-			else gainAddL = gainAddL * releaseTaw;
-			if (vr1 > gainAddR)gainAddR = vr1;
-			else gainAddR = gainAddR * releaseTaw;
+			float smaxL = swmL.ProcessSample(vl1);//计算滑动窗口最大值
+			float smaxR = swmR.ProcessSample(vr1);
+			float dlyL = delayL.ProcessSample(inl);//延时补偿
+			float dlyR = delayR.ProcessSample(inr);
 
-			float outl = inl;
-			float outr = inr;
-			outL[i] = outl / (1.0f + gainAddL);//应用增益补偿
-			outR[i] = outr / (1.0f + gainAddR);
+			//主要是这个部分出现问题。
+			//////
+			if (smaxL > gainAddL)gainAddL += smaxL / attackSamples;//如果是上升则用线性包络
+			else gainAddL += releaseTaw * (smaxL - gainAddL);//如果是下降则用指数衰减包络
+			if (smaxR > gainAddR)gainAddR += smaxR / attackSamples;
+			else gainAddR += releaseTaw * (smaxR - gainAddR);
+			//////
+
+			float outl = dlyL / (1.0f + gainAddL);
+			float outr = dlyL / (1.0f + gainAddR);
+			outL[i] = outl;//应用增益补偿
+			outR[i] = outr;
 		}
 	}
 };

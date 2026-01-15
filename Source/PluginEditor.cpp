@@ -54,12 +54,12 @@ void LModelAudioProcessorEditor::paint(juce::Graphics& g)
 	g.fillAll(juce::Colour(0x00, 0x00, 0x00));
 
 	g.fillAll();
-	g.setFont(juce::Font("FIXEDSYS", 17.0, 1));
+	g.setFont(juce::Font("FIXEDSYS", 16.0, 1));
 	g.setColour(juce::Colour(0xff00ff00));;
 
 	int w = getBounds().getWidth(), h = getBounds().getHeight();
 
-	//g.drawText("L-MODEL Magnitudelay", juce::Rectangle<float>(32, 16, w, 16), 1);
+	g.drawText("LMLimiter 260114 18:37", juce::Rectangle<float>(0, h - 16, w, 16), 1);
 }
 
 void LModelAudioProcessorEditor::resized()
