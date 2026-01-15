@@ -121,6 +121,7 @@ public:
 	}
 	void ProcessBlock(const float* inL, const float* inR, float* outL, float* outR, int numSamples)
 	{
+		//到时候优化，把循环里面的乘法在外面预先计算好
 		for (int i = 0; i < numSamples; ++i)
 		{
 			float inl = inL[i] * inputMul / thresholdMul;
